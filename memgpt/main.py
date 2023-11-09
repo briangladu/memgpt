@@ -9,6 +9,7 @@ import sys
 import pickle
 import traceback
 import json
+import re
 
 import questionary
 import typer
@@ -381,6 +382,7 @@ async def run_agent_loop(memgpt_agent, first, no_verify=False, cfg=None, strip_u
     user_input = None
     skip_next_user_input = False
     user_message = None
+    image_data = None
     USER_GOES_FIRST = first
 
     if not USER_GOES_FIRST:
@@ -580,14 +582,34 @@ async def run_agent_loop(memgpt_agent, first, no_verify=False, cfg=None, strip_u
 
             else:
                 # If message did not begin with command prefix, pass inputs to MemGPT
+
+                # Clear image, llamacpp process image everytime if it is sent
+                image_data = None
+
+                # Search for the image tag in the message. [img=route/to/file.jpg, id=1]
+                match = re.search(r"\[img=(.*?), id=(\d+)\]", user_input)
+                if match:
+                    try:
+                        image_path = match.group(1)
+                        image_id = int(match.group(2))
+                        # Try to open the file to see if it exists
+                        with open(image_path, "rb") as image_file:
+                            pass
+                        image_data = [{"data": utils.process_image(image_path), "id": image_id}]
+                        # Replace route with image_id tag
+                        user_input = user_input.replace(f"[img={image_path}, id={image_id}]", f"[img-{image_id}]")
+                    except Exception as e:
+                        print(f"Opening {image_path} failed with: {e}")
+                        continue
+
                 # Handle user message and append to messages
                 user_message = system.package_user_message(user_input)
 
         skip_next_user_input = False
 
-        async def process_agent_step(user_message, no_verify):
+        async def process_agent_step(user_message, no_verify, image_data):
             new_messages, heartbeat_request, function_failed, token_warning = await memgpt_agent.step(
-                user_message, first_message=False, skip_verify=no_verify
+                user_message, image_data, first_message=False, skip_verify=no_verify
             )
 
             skip_next_user_input = False
@@ -606,11 +628,11 @@ async def run_agent_loop(memgpt_agent, first, no_verify=False, cfg=None, strip_u
         while True:
             try:
                 if strip_ui:
-                    new_messages, user_message, skip_next_user_input = await process_agent_step(user_message, no_verify)
+                    new_messages, user_message, skip_next_user_input = await process_agent_step(user_message, no_verify, image_data)
                     break
                 else:
                     with console.status("[bold cyan]Thinking...") as status:
-                        new_messages, user_message, skip_next_user_input = await process_agent_step(user_message, no_verify)
+                        new_messages, user_message, skip_next_user_input = await process_agent_step(user_message, no_verify, image_data)
                         break
             except Exception as e:
                 print("An exception ocurred when running agent.step(): ")

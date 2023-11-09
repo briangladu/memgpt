@@ -14,6 +14,7 @@ import fitz
 from tqdm import tqdm
 import typer
 import memgpt
+import base64
 from memgpt.openai_tools import async_get_embedding_with_backoff
 from memgpt.constants import MEMGPT_DIR
 from llama_index import set_global_service_context, ServiceContext, VectorStoreIndex, load_index_from_storage, StorageContext
@@ -432,3 +433,9 @@ def get_human_text(name: str):
         file = os.path.basename(file_path)
         if f"{name}.txt" == file or name == file:
             return open(file_path, "r").read().strip()
+
+
+def process_image(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
+    return encoded_image
