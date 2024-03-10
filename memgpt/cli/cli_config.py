@@ -29,6 +29,11 @@ from memgpt.models.pydantic_models import HumanModel, PersonaModel
 app = typer.Typer()
 
 
+ENTER_OPENAI_KEY = (
+    "Enter your OpenAI API key, or separated by comma keys\n" "(starts with 'sk-', see https://platform.openai.com/api-keys):"
+)
+
+
 def get_azure_credentials():
     creds = dict(
         azure_key=os.getenv("AZURE_OPENAI_KEY"),
@@ -76,9 +81,7 @@ def configure_llm_endpoint(config: MemGPTConfig, credentials: MemGPTCredentials)
             if openai_api_key is None:
                 while openai_api_key is None or len(openai_api_key) == 0:
                     # Ask for API key as input
-                    openai_api_key = questionary.password(
-                        "Enter your OpenAI API key (starts with 'sk-', see https://platform.openai.com/api-keys):"
-                    ).ask()
+                    openai_api_key = questionary.password(ENTER_OPENAI_KEY).ask()
                     if openai_api_key is None:
                         raise KeyboardInterrupt
             credentials.openai_key = openai_api_key
@@ -89,10 +92,7 @@ def configure_llm_endpoint(config: MemGPTConfig, credentials: MemGPTCredentials)
             default_input = (
                 shorten_key_middle(credentials.openai_key) if credentials.openai_key.startswith("sk-") else credentials.openai_key
             )
-            openai_api_key = questionary.password(
-                "Enter your OpenAI API key (starts with 'sk-', see https://platform.openai.com/api-keys):",
-                default=default_input,
-            ).ask()
+            openai_api_key = questionary.password(ENTER_OPENAI_KEY, default=default_input).ask()
             if openai_api_key is None:
                 raise KeyboardInterrupt
             # If the user modified it, use the new one
@@ -330,24 +330,15 @@ def configure_model(config: MemGPTConfig, credentials: MemGPTCredentials, model_
                 if model is None:
                     raise KeyboardInterrupt
 
-                # If we got custom input, ask for raw input
-                if model == other_option_str:
-                    model = questionary.text(
-                        "Enter HuggingFace model tag (e.g. ehartford/dolphin-2.2.1-mistral-7b):",
-                        default=default_model,
-                    ).ask()
-                    if model is None:
-                        raise KeyboardInterrupt
-                    # TODO allow empty string for input?
-                    model = None if len(model) == 0 else model
-
-            else:
+            # If we got custom input, ask for raw input
+            if model_options is None or model == other_option_str:
                 model = questionary.text(
                     "Enter HuggingFace model tag (e.g. ehartford/dolphin-2.2.1-mistral-7b):",
                     default=default_model,
                 ).ask()
                 if model is None:
                     raise KeyboardInterrupt
+                # TODO allow empty string for input?
                 model = None if len(model) == 0 else model
 
         # model wrapper
@@ -376,7 +367,7 @@ def configure_model(config: MemGPTConfig, credentials: MemGPTCredentials, model_
             if local_auth_type is None:
                 raise KeyboardInterrupt
             local_auth_key = questionary.password(
-                "Enter your authentication key:",
+                "Enter your authentication key, or separated by comma keys:",
             ).ask()
             if local_auth_key is None:
                 raise KeyboardInterrupt
@@ -444,9 +435,7 @@ def configure_embedding_endpoint(config: MemGPTConfig, credentials: MemGPTCreden
                 # if we still can't find it, ask for it as input
                 while openai_api_key is None or len(openai_api_key) == 0:
                     # Ask for API key as input
-                    openai_api_key = questionary.password(
-                        "Enter your OpenAI API key (starts with 'sk-', see https://platform.openai.com/api-keys):"
-                    ).ask()
+                    openai_api_key = questionary.password(ENTER_OPENAI_KEY).ask()
                     if openai_api_key is None:
                         raise KeyboardInterrupt
                 credentials.openai_key = openai_api_key
