@@ -271,6 +271,7 @@ class PresetModel(Base):
     name = Column(String, nullable=False)
     description = Column(String)
     system = Column(String)
+    template_data = Column(JSON)
     human = Column(String)
     human_name = Column(String, nullable=False)
     persona = Column(String)
@@ -290,6 +291,7 @@ class PresetModel(Base):
             name=self.name,
             description=self.description,
             system=self.system,
+            template_data=self.template_data,
             human=self.human,
             persona=self.persona,
             human_name=self.human_name,
