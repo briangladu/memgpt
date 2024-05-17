@@ -23,7 +23,7 @@ You can also use MemGPT to depoy agents as a *service*. You can use a MemGPT ser
 <img width="1000" alt="image" src="https://github.com/cpacker/MemGPT/assets/8505980/1096eb91-139a-4bc5-b908-fa585462da09">
 
 
-## Installation & Setup   
+## Installation & Setup
 Install MemGPT:
 ```sh
 pip install -U pymemgpt
@@ -54,19 +54,19 @@ MemGPT provides a developer portal that enables you to easily create, edit, moni
 
 <img width="1000" alt="image" src="https://github.com/cpacker/MemGPT/assets/5475622/071117c5-46a7-4953-bc9d-d74880e66258">
 
-## Quickstart (Server)  
+## Quickstart (Server)
 
-**Option 1 (Recommended)**: Run with docker compose  
+**Option 1 (Recommended)**: Run with docker compose
 1. [Install docker on your system](https://docs.docker.com/get-docker/)
 2. Clone the repo: `git clone https://github.com/cpacker/MemGPT.git`
 3. Run `docker compose up`
-4. Go to `memgpt.localhost` in the browser to view the developer portal 
+4. Go to `memgpt.localhost` in the browser to view the developer portal
 
 **Option 2:** Run with the CLI:
 1. Run `memgpt server`
 2. Go to `localhost:8283` in the browser to view the developer portal
 
-Once the server is running, you can use the [Python client](https://memgpt.readme.io/docs/admin-client) or [REST API](https://memgpt.readme.io/reference/api) to connect to `memgpt.localhost` (if you're running with docker compose) or `localhost:8283` (if you're running with the CLI) to create users, agents, and more. The service requires authentication with a MemGPT admin password, which can be set with running `export MEMGPT_SERVER_PASS=password`. 
+Once the server is running, you can use the [Python client](https://memgpt.readme.io/docs/admin-client) or [REST API](https://memgpt.readme.io/reference/api) to connect to `memgpt.localhost` (if you're running with docker compose) or `localhost:8283` (if you're running with the CLI) to create users, agents, and more. The service requires authentication with a MemGPT admin password, which can be set with running `export MEMGPT_SERVER_PASS=password`.
 
 ## Supported Endpoints & Backends
 MemGPT is designed to be model and provider agnostic. The following LLM and embedding endpoints are supported:
@@ -103,4 +103,3 @@ To evaluate the performance of a model on MemGPT, simply configure the appropria
 
 ## Legal notices
 By using MemGPT and related MemGPT services (such as the MemGPT endpoint or hosted service), you agree to our [privacy policy](PRIVACY.md) and [terms of service](TERMS.md).
-
