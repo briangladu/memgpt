@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import requests
 
+from memgpt.cli.cli import QuickstartChoice, quickstart
 from memgpt.config import MemGPTConfig
 from memgpt.constants import DEFAULT_PRESET
 from memgpt.data_sources.connectors import DataConnector
@@ -52,7 +53,7 @@ from memgpt.server.rest_api.presets.index import (
     ListPresetsResponse,
 )
 from memgpt.server.rest_api.sources.index import ListSourcesResponse
-from memgpt.server.rest_api.tools.index import CreateToolResponse
+from memgpt.server.rest_api.tools.index import CreateToolResponse, ListToolsResponse
 from memgpt.server.server import SyncServer
 
 
@@ -481,6 +482,8 @@ class RESTClient(AbstractClient):
     def send_message(self, agent_id: uuid.UUID, message: str, role: str, stream: Optional[bool] = False) -> UserMessageResponse:
         data = {"message": message, "role": role, "stream": stream}
         response = requests.post(f"{self.base_url}/api/agents/{agent_id}/messages", json=data, headers=self.headers)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to send message: {response.text}")
         return UserMessageResponse(**response.json())
 
     # humans / personas
@@ -516,7 +519,7 @@ class RESTClient(AbstractClient):
         """List loaded sources"""
         response = requests.get(f"{self.base_url}/api/sources", headers=self.headers)
         response_json = response.json()
-        return ListSourcesResponse(**response_json)
+        return ListSourcesResponse(**response_json).sources
 
     def delete_source(self, source_id: uuid.UUID):
         """Delete a source and associated data (including attached to agents)"""
@@ -552,12 +555,16 @@ class RESTClient(AbstractClient):
         """Create a new source"""
         payload = {"name": name}
         response = requests.post(f"{self.base_url}/api/sources", json=payload, headers=self.headers)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to create source: {response.text}")
         response_json = response.json()
         response_obj = SourceModel(**response_json)
+        response_obj.id = uuid.UUID(response_obj.id)
+        response_obj.user_id = uuid.UUID(response_obj.user_id)
         return Source(
-            id=uuid.UUID(response_obj.id),
+            id=response_obj.id,
             name=response_obj.name,
-            user_id=uuid.UUID(response_obj.user_id),
+            user_id=response_obj.user_id,
             created_at=response_obj.created_at,
             embedding_dim=response_obj.embedding_config["embedding_dim"],
             embedding_model=response_obj.embedding_config["embedding_model"],
@@ -585,13 +592,26 @@ class RESTClient(AbstractClient):
         response = requests.get(f"{self.base_url}/api/config", headers=self.headers)
         return ConfigResponse(**response.json())
 
+    # tools
+
+    def list_tools(self) -> ListToolsResponse:
+        response = requests.get(f"{self.base_url}/api/tools", headers=self.headers)
+        if response.status_code != 200:
+            raise ValueError(f"Failed to list tools: {response.text}")
+        return ListToolsResponse(**response.json())
+
+    def get_tool(self, name: str) -> ToolModel:
+        response = requests.get(f"{self.base_url}/api/tools/{name}", headers=self.headers)
+        if response.status_code == 404:
+            return None
+        elif response.status_code != 200:
+            raise ValueError(f"Failed to get tool: {response.text}")
+        return ToolModel(**response.json())
+
 
 class LocalClient(AbstractClient):
     def __init__(
-        self,
-        auto_save: bool = False,
-        user_id: Optional[str] = None,
-        debug: bool = False,
+        self, auto_save: bool = False, user_id: Optional[str] = None, debug: bool = False, quickstart_option: Optional[str] = None
     ):
         """
         Initializes a new instance of Client class.
@@ -601,6 +621,14 @@ class LocalClient(AbstractClient):
         :param debug: indicates whether to display debug messages.
         """
         self.auto_save = auto_save
+
+        # quickstart
+        if quickstart_option == "openai":
+            quickstart(QuickstartChoice.openai)
+        elif quickstart_option == "memgpt_hosted":
+            quickstart(QuickstartChoice.memgpt_hosted)
+        elif quickstart_option:
+            raise ValueError(f"Invalid endpoint {quickstart_option}")
 
         # determine user_id (pulled from local config)
         config = MemGPTConfig.load()
@@ -690,8 +718,8 @@ class LocalClient(AbstractClient):
         self.server.user_message(user_id=self.user_id, agent_id=agent_id, message=message)
         if self.auto_save:
             self.save()
-        else:
-            return self.interface.to_list()
+
+        return UserMessageResponse(messages=self.interface.to_list())
 
     def run_command(self, agent_id: str, command: str) -> Union[str, None]:
         self.interface.clear()
